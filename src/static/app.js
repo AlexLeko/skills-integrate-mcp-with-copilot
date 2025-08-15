@@ -3,28 +3,34 @@ document.addEventListener("DOMContentLoaded", () => {
   const activitySelect = document.getElementById("activity");
   const signupForm = document.getElementById("signup-form");
   const messageDiv = document.getElementById("message");
+  const searchForm = document.getElementById("search-form");
+  const searchEmailInput = document.getElementById("search-email");
+  const clearSearchBtn = document.getElementById("clear-search");
 
-  // Function to fetch activities from API
-  async function fetchActivities() {
-    try {
-      const response = await fetch("/activities");
-      const activities = await response.json();
+  // Function to fetch activities from API (optionally filtered by email)
+  async function fetchActivities(emailFilter = "") {
+    let url = "/activities";
+    if (emailFilter && emailFilter.trim() !== "") {
+      url = `/activities/search?email=${encodeURIComponent(emailFilter.trim())}`;
+    }
+    const response = await fetch(url);
+    const activities = await response.json();
 
-      // Clear loading message
-      activitiesList.innerHTML = "";
+    // Clear loading message
+    activitiesList.innerHTML = "";
 
-      // Populate activities list
-      Object.entries(activities).forEach(([name, details]) => {
-        const activityCard = document.createElement("div");
-        activityCard.className = "activity-card";
+    // Populate activities list
+    Object.entries(activities).forEach(([name, details]) => {
+      const activityCard = document.createElement("div");
+      activityCard.className = "activity-card";
 
-        const spotsLeft =
-          details.max_participants - details.participants.length;
+      const spotsLeft =
+        details.max_participants - details.participants.length;
 
-        // Create participants HTML with delete icons instead of bullet points
-        const participantsHTML =
-          details.participants.length > 0
-            ? `<div class="participants-section">
+      // Create participants HTML with delete icons instead of bullet points
+      const participantsHTML =
+        details.participants.length > 0
+          ? `<div class="participants-section">
               <h5>Participants:</h5>
               <ul class="participants-list">
                 ${details.participants
@@ -35,9 +41,9 @@ document.addEventListener("DOMContentLoaded", () => {
                   .join("")}
               </ul>
             </div>`
-            : `<p><em>No participants yet</em></p>`;
+          : `<p><em>No participants yet</em></p>`;
 
-        activityCard.innerHTML = `
+      activityCard.innerHTML = `
           <h4>${name}</h4>
           <p>${details.description}</p>
           <p><strong>Schedule:</strong> ${details.schedule}</p>
@@ -47,24 +53,19 @@ document.addEventListener("DOMContentLoaded", () => {
           </div>
         `;
 
-        activitiesList.appendChild(activityCard);
+      activitiesList.appendChild(activityCard);
 
-        // Add option to select dropdown
-        const option = document.createElement("option");
-        option.value = name;
-        option.textContent = name;
-        activitySelect.appendChild(option);
-      });
+      // Add option to select dropdown
+      const option = document.createElement("option");
+      option.value = name;
+      option.textContent = name;
+      activitySelect.appendChild(option);
+    });
 
-      // Add event listeners to delete buttons
-      document.querySelectorAll(".delete-btn").forEach((button) => {
-        button.addEventListener("click", handleUnregister);
-      });
-    } catch (error) {
-      activitiesList.innerHTML =
-        "<p>Failed to load activities. Please try again later.</p>";
-      console.error("Error fetching activities:", error);
-    }
+    // Add event listeners to delete buttons
+    document.querySelectorAll(".delete-btn").forEach((button) => {
+      button.addEventListener("click", handleUnregister);
+    });
   }
 
   // Handle unregister functionality
@@ -90,7 +91,7 @@ document.addEventListener("DOMContentLoaded", () => {
         messageDiv.className = "success";
 
         // Refresh activities list to show updated participants
-        fetchActivities();
+        fetchActivities(searchEmailInput.value);
       } else {
         messageDiv.textContent = result.detail || "An error occurred";
         messageDiv.className = "error";
@@ -135,7 +136,7 @@ document.addEventListener("DOMContentLoaded", () => {
         signupForm.reset();
 
         // Refresh activities list to show updated participants
-        fetchActivities();
+        fetchActivities(searchEmailInput.value);
       } else {
         messageDiv.textContent = result.detail || "An error occurred";
         messageDiv.className = "error";
@@ -153,6 +154,17 @@ document.addEventListener("DOMContentLoaded", () => {
       messageDiv.classList.remove("hidden");
       console.error("Error signing up:", error);
     }
+  });
+
+  searchForm.addEventListener("submit", function (event) {
+    event.preventDefault();
+    const emailTerm = searchEmailInput.value;
+    fetchActivities(emailTerm);
+  });
+
+  clearSearchBtn.addEventListener("click", function () {
+    searchEmailInput.value = "";
+    fetchActivities("");
   });
 
   // Initialize app
